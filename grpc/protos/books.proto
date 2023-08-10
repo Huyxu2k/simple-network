@@ -1,0 +1,21 @@
+syntax="proto3";
+package books;
+
+service Books{
+    rpc Insert(BookRequest) returns (BookResponse);
+    rpc Delete(BookRequest) returns (BookResponse);
+    rpc Update(BookRequest) returns (BookResponse);
+    rpc Select(BookRequest) returns (BookResponse);
+}
+
+message BookRequest{
+    string name=1;
+    string author=2;
+    string quantity=3;
+    string description=4;
+}
+message BookResponse{
+    bool status=1;
+    string message=2;
+}
+

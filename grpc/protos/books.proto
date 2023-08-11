@@ -2,13 +2,31 @@ syntax="proto3";
 package books;
 
 service Books{
-    rpc Insert(BookRequest) returns (BookResponse);
-    rpc Delete(BookRequest) returns (BookResponse);
-    rpc Update(BookRequest) returns (BookResponse);
-    rpc Select(BookRequest) returns (BookResponse);
+    rpc Insert(BookInsertRequest) returns (BookResponse);
+    rpc Delete(BookDeleteRequest) returns (BookResponse);
+    rpc Update(BookUpdateRequest) returns (BookResponse);
+    rpc Select(BookSelectRequest) returns (BookResponse);
+    
+}
+//Insert request
+message BookInsertRequest{
+   optional BookInfomation bookinfo=1;
+}
+//Delete request
+message BookDeleteRequest{
+   uint32 id=1;
+}
+//Update request
+message BookUpdateRequest{
+    uint32 id=1;
+    optional BookInfomation bookinfo=2;
+}
+//Select request
+message BookSelectRequest{
+    uint32 id=1;
 }
 
-message BookRequest{
+message BookInfomation{
     string name=1;
     string author=2;
     string quantity=3;

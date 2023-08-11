@@ -3,11 +3,12 @@ use books::{
     BookDeleteRequest, BookInfomation, BookInsertRequest, BookResponse, BookSelectRequest,
     BookUpdateRequest,
 };
+use sqlx::mysql::MySqlPoolOptions;
+use sqlx::{pool, MySql, MySqlConnection, MySqlPool, Pool};
 use std::collections::{HashMap, HashSet};
 use tokio::sync::mpsc;
 use tonic::metadata::MetadataValue;
 use tonic::{transport::Server, Request, Response, Status};
-
 pub mod books {
     tonic::include_proto!("books");
 }
@@ -39,27 +40,33 @@ pub mod books {
 //             .map(|(k, _v)| k)
 //     }
 // }
-// #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
-// pub struct BookInfo {
-//     pub name: String,
-//     pub author: String,
-//     pub quantity: i32,
-//     pub description: String,
-// }
-// impl BookInfo {
-//     pub fn new(name: String, author: String, quantity: i32, description: String) -> BookInfo {
-//         BookInfo {
-//             name,
-//             author,
-//             quantity,
-//             description,
-//         }
-//     }
-// }
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct BookInfo {
+    pub name: String,
+    pub author: String,
+    pub quantity: i32,
+    pub description: String,
+}
+impl BookInfo {
+    pub fn new(name: String, author: String, quantity: i32, description: String) -> BookInfo {
+        BookInfo {
+            name,
+            author,
+            quantity,
+            description,
+        }
+    }
+}
 
-#[derive(Debug, Default)]
-pub struct BookService {}
-
+#[derive(Debug)]
+pub struct BookService {
+    con: Pool<MySql>,
+}
+impl BookService {
+    fn new(con: Pool<MySql>) -> BookService {
+        Self { con }
+    }
+}
 #[tonic::async_trait]
 impl Books for BookService {
     async fn insert(
@@ -68,21 +75,37 @@ impl Books for BookService {
     ) -> Result<Response<BookResponse>, Status> {
         println!("Get a request: {:?}", request);
         let req = request.into_inner();
-        // let book = req
-        //     .bookinfo
-        //     .map(|f| BookInfo {
-        //         name: f.name,
-        //         author: f.author,
-        //         quantity: f.quantity.parse::<i32>().unwrap(),
-        //         description: f.description,
-        //     })
-        //     .unwrap();
-        //self.data.add(book);
-
-        let reply = BookResponse {
-            status: true,
-            message: format!("Insert successful"),
-        };
+        let book = req
+            .bookinfo
+            .map(|f| BookInfo {
+                name: f.name,
+                author: f.author,
+                quantity: f.quantity.parse::<i32>().unwrap(),
+                description: f.description,
+            })
+            .unwrap();
+        let sql_query = format!(
+            "insert into books (name,author,quantity,description) values ('{}','{}',{},'{}')",
+            book.name, book.author, book.quantity, book.description
+        );
+        let excute = sqlx::query(&sql_query).execute(&self.con).await;
+        let mut reply;
+        //check insert 
+        match excute {
+            Ok(_) => {
+                reply = BookResponse {
+                    status: true,
+                    message: format!("Insert successful"),
+                };
+            },
+            Err(err) => {
+                reply = BookResponse {
+                    status: false,
+                    message: err.to_string(),
+                };
+            },
+        }
+        
         Ok(Response::new(reply))
     }
     async fn delete(
@@ -138,12 +161,28 @@ fn interceptor(req: Request<()>) -> Result<Request<()>, Status> {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    //mysql connect
+    let database_url = "mysql://root:123456@localhost:3306/testdb"; //std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let pool = match MySqlPoolOptions::new()
+        .max_connections(10)
+        .connect(&database_url)
+        .await
+    {
+        Ok(pool) => {
+            println!("✅Connection to the database is successful!");
+            pool
+        }
+        Err(err) => {
+            println!("🔥 Failed to connect to the database: {:?}", err);
+            std::process::exit(1);
+        }
+    };
+
+    //Build service
     let address = "[::1]:50051".parse()?;
-    let book_services = BookService::default();
+    let book_services = BookService::new(pool.clone());
     let svc = BooksServer::with_interceptor(book_services, interceptor);
 
-    Server::builder()
-           .add_service(svc)
-           .serve(address).await?;
+    Server::builder().add_service(svc).serve(address).await?;
     Ok(())
 }

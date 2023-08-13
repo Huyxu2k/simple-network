@@ -1,8 +1,9 @@
 use books::books_client::BooksClient;
-use books::{BookInfomation, BookInsertRequest};
+use books::{BookInfomation, BookInsertRequest,BookDeleteRequest};
 use tonic::Request;
 use tonic::{metadata::MetadataValue};
 use tonic::transport::Channel;
+
 
 pub mod books {
     tonic::include_proto!("books");
@@ -25,8 +26,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let req = tonic::Request::new(BookInsertRequest {
         bookinfo:Some(bookinfo),
     });
-    let res = client.insert(req).await?;
+    //test insert
+    //let res = client.insert(req).await?;
+    
+    //test update
 
-    println!("Response={:?}", res);
+    //test delete
+    let res_del=client.delete(tonic::Request::new({
+        BookDeleteRequest{
+            id:3
+        }
+    })).await?;
+    
+    //test select
+
+    //println!("Response={:?}", res);
+    println!("Response={:?}", res_del);
+
     Ok(())
 }

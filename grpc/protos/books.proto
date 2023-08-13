@@ -5,7 +5,7 @@ service Books{
     rpc Insert(BookInsertRequest) returns (BookResponse);
     rpc Delete(BookDeleteRequest) returns (BookResponse);
     rpc Update(BookUpdateRequest) returns (BookResponse);
-    rpc Select(BookSelectRequest) returns (BookResponse);
+    rpc Select(BookSelectRequest) returns (BookSelectResponse);
     
 }
 //Insert request
@@ -37,3 +37,9 @@ message BookResponse{
     string message=2;
 }
 
+message BookSelectResponse{
+    bool status=1;
+    string message=2;
+    uint32 id=3;
+    optional BookInfomation bookinfo=4;
+}

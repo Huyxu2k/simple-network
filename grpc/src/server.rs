@@ -1,9 +1,9 @@
 use books::books_server::{Books, BooksServer};
 use books::{
     BookDeleteRequest, BookInfomation, BookInsertRequest, BookResponse, BookSelectRequest,
-    BookUpdateRequest,
+    BookUpdateRequest,BookSelectResponse,
 };
-use sqlx::mysql::MySqlPoolOptions;
+use sqlx::mysql::{MySqlPoolOptions, MySqlRow};
 use sqlx::{pool, MySql, MySqlConnection, MySqlPool, Pool};
 use std::collections::{HashMap, HashSet};
 use tokio::sync::mpsc;
@@ -114,22 +114,70 @@ impl Books for BookService {
     ) -> Result<Response<BookResponse>, Status> {
         println!("Get a request: {:?}", request);
         let req = request.into_inner();
-        let reply = BookResponse {
-            status: true,
-            message: format!("Delete successful"),
-        };
+
+        let sql_query=format!("delete from books where id={}",req.id);
+        let excute = sqlx::query(&sql_query).execute(&self.con).await;
+        let mut reply;
+        //check insert 
+        match excute {
+            Ok(_) => {
+                reply = BookResponse {
+                    status: true,
+                    message: format!("Delete successful"),
+                };
+            },
+            Err(err) => {
+                reply = BookResponse {
+                    status: false,
+                    message: err.to_string(),
+                };
+            },
+        }
         Ok(Response::new(reply))
     }
     async fn select(
         &self,
         request: Request<BookSelectRequest>,
-    ) -> Result<Response<BookResponse>, Status> {
+    ) -> Result<Response<BookSelectResponse>, Status> {
         println!("Get a request: {:?}", request);
         let req = request.into_inner();
-        let reply = BookResponse {
-            status: true,
-            message: format!("Select successful"),
-        };
+        let id=req.id;
+        let mut sql_query=String::new();
+        //select all
+        if id==0{
+            sql_query=format!("select * from books");
+        }
+        else {//select folow value of id
+            sql_query=format!("select * from books where id={}",id);
+        }
+        
+         let result =sqlx::query(&sql_query).execute(&self.con).await;
+        // let _books=result.map(|row:MySqlRow|BookInfo{
+        //                                name:row.get("name"),
+        //                                author:row.get("author"),
+        //                                quantity: row.get("quantity"), 
+        //                                description: row.get("description")
+        //                              });
+        let mut reply ;
+        match result {
+            Ok(rel)=>{
+                reply=BookSelectResponse {
+                    status: true,
+                    message: format!("Select successful"),
+                    id,
+                    bookinfo:todo!(),
+                };
+            },
+            Err(err)=>{
+                reply=BookSelectResponse {
+                    status: false,
+                    message: err.to_string(),
+                    id,
+                    bookinfo:None
+                };
+            }
+        }
+         
         Ok(Response::new(reply))
     }
     async fn update(
@@ -138,10 +186,38 @@ impl Books for BookService {
     ) -> Result<Response<BookResponse>, Status> {
         println!("Get a request: {:?}", request);
         let req = request.into_inner();
-        let reply = BookResponse {
-            status: true,
-            message: format!("Update successful"),
-        };
+        let book = req
+            .bookinfo
+            .map(|f| BookInfo {
+                name: f.name,
+                author: f.author,
+                quantity: f.quantity.parse::<i32>().unwrap(),
+                description: f.description,
+            })
+            .unwrap();
+        let sql_query = format!(
+            "update books
+             set name={},author={},quantity={},description={}
+             where id={}
+            ",book.name,book.author,book.quantity,book.description,req.id
+        );
+        let excute = sqlx::query(&sql_query).execute(&self.con).await;
+        let mut reply;
+        //check insert 
+        match excute {
+            Ok(_) => {
+                reply = BookResponse {
+                    status: true,
+                    message: format!("Update successful"),
+                };
+            },
+            Err(err) => {
+                reply = BookResponse {
+                    status: false,
+                    message: err.to_string(),
+                };
+            },
+        }
         Ok(Response::new(reply))
     }
 }

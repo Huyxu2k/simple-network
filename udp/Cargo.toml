@@ -1,0 +1,19 @@
+[package]
+name = "udp"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+#server
+[[bin]]
+   name="server"
+   path="./src/server.rs"
+
+#client 
+[[bin]]
+    name="client"
+    path="./src/client.rs"
+
+[dependencies]
+tokio={version = "1.30.0",features = ["full"]}

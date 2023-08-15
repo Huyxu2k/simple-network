@@ -1,0 +1,20 @@
+[package]
+name = "quic"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+#server
+[[bin]]
+  name="server"
+  path="./src/server.rs"
+
+#client
+[[bin]]
+  name="client"
+  path="./src/client.rs"
+
+[dependencies]
+ring = "0.16.20"
+quiche = "0.17.2"

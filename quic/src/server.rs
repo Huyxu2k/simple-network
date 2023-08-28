@@ -39,7 +39,8 @@ fn main(){
       ::std::process::exit(code);
 }
 
-
+const PATH_KEY:&str="./key.der";
+const PATH_CERT:&str="./cert.der";
 
 #[tokio::main]
 async fn run(options: Opt) -> Result<()> {//options: Opt
@@ -79,8 +80,8 @@ async fn run(options: Opt) -> Result<()> {//options: Opt
     } else {
         let dirs = directories_next::ProjectDirs::from("org", "quinn", "quinn-examples").unwrap();
         let path = dirs.data_local_dir();
-        let cert_path = path.join("cert.der");
-        let key_path = path.join("key.der");
+        let cert_path = path.join(PATH_CERT);
+        let key_path = path.join(PATH_KEY);
         let (cert, key) = match fs::read(&cert_path).and_then(|x| Ok((x, fs::read(&key_path)?))) {
             Ok(x) => x,
             Err(ref e) if e.kind() == io::ErrorKind::NotFound => {

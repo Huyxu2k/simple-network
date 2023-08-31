@@ -1,0 +1,17 @@
+FROM rust:1.71-buster as builder
+
+WORKDIR /app
+
+COPY . .
+
+RUN cargo build --bin client --release
+
+FROM debian:buster-slim
+
+WORKDIR /usr/local/bin
+
+SHELL [ " sudo apt install  protobuf-compiler" ]
+
+COPY --from=builder /app/target/release/client .
+
+CMD [ "./client" ]

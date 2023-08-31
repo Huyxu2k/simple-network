@@ -235,17 +235,22 @@ fn interceptor(req: Request<()>) -> Result<Request<()>, Status> {
     // Ok(req)
 }
 
+const DATABASE_URL:&str=env!("DATABASE_URL");
+const SERVER_ADDRESS:&str=env!("SERVER_ADDRESS");
+const SERVER_PORT:&str=env!("SERVER_PORT");
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     //mysql connect
-    let database_url = "mysql://root:123456@localhost:3306/testdb"; //std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    //let database_url = "mysql://root:123456@localhost:3306/testdb"; //std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
     let pool = match MySqlPoolOptions::new()
         .max_connections(10)
-        .connect(&database_url)
+        .connect(DATABASE_URL)
         .await
     {
         Ok(pool) => {
             println!("✅Connection to the database is successful!");
+            crete_table_books(pool);
             pool
         }
         Err(err) => {
@@ -255,10 +260,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     //Build service
-    let address = "[::1]:50051".parse()?;
+    let address=format!("{}:{}",SERVER_ADDRESS,SERVER_PORT).parse::<std::net::SocketAddr>().unwrap();
+    //let address = "[::1]:50051".parse()?;
     let book_services = BookService::new(pool.clone());
     let svc = BooksServer::with_interceptor(book_services, interceptor);
 
     Server::builder().add_service(svc).serve(address).await?;
     Ok(())
+}
+
+async fn crete_table_books(con:Pool<MySql>){
+    sqlx::query("
+        CREATE TABLE if not exists `books` (
+            `id` int NOT NULL AUTO_INCREMENT,
+            `name` varchar(450) NOT NULL,
+            `author` varchar(450) NOT NULL,
+            `quantity` int DEFAULT NULL,
+            `description` varchar(450) DEFAULT NULL,
+            PRIMARY KEY (`id`)
+        ) 
+    ").execute(&con).await.unwrap();
 }

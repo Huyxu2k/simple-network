@@ -1,0 +1,25 @@
+FROM rust:1.71-buster as builder
+
+WORKDIR /app
+
+ARG DATABASE_URL
+ARG SERVER_ADDRESS
+ARG SERVER_PORT
+
+ENV DATABASE_URL=$DATABASE_URL
+ENV SERVER_ADDRESS=$SERVER_ADDRESS
+ENV SERVER_PORT=$SERVER_PORT
+
+COPY . .
+
+RUN cargo build --bin server --release
+
+FROM debian:buster-slim
+
+WORKDIR /usr/local/bin
+
+SHELL [ " sudo apt install  protobuf-compiler" ]
+
+COPY --from=builder /app/target/release/server .
+
+CMD [ "./server" ]

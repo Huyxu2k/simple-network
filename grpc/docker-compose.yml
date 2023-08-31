@@ -1,0 +1,41 @@
+version: '2.1'
+services:
+#database (mysql)
+  mysql:
+     container_name: mysqldb
+     image: mysql:8.0
+     environment:
+        MYSQL_ROOT_PASSWORD: 123456
+        MYSQL_DATABASE: testdb
+        MYSQL_USER: root
+     ports:
+       - '3306:3306'
+     volumes:
+       - mysqldata:/var/lib/mysql/data  
+#server   
+  grpcserver:
+      container_name: grpc-server
+      image: grpcserver-rust
+      build:
+        context: .
+        dockerfile: Dockerfile-server
+        args:
+           DATABASE_URL: mysql://root:123456@localhost:3306/testdb
+           SERVER_ADDRESS: 0.0.0.0
+           SERVER_PORT: 50051
+      depends_on:
+         - mysql
+      ports:
+        - '50051:50051'
+#client
+  # grpcclient:
+  #   container_name: grpc-client
+  #   image: grpcclient-rust
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile-client
+  #   depends_on:
+  #     - grpcserver
+volumes:
+  mysqldata: {}
+           
